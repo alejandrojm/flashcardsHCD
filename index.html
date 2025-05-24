@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Cards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos generales para el cuerpo de la página */
+        body {
+            font-family: 'Titillium Web', sans-serif; /* Aplica la fuente Titillium Web */
+            background-color: #d2dae3; /* Un azul muy claro y suave para el fondo */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Contenedor principal del juego */
+        .flashcard-container {
+            position: relative; /* Para posicionar las tarjetas apiladas */
+            perspective: 1000px; /* Necesario para el efecto 3D de volteo */
+            width: 90%; /* Ancho responsivo */
+            max-width: 500px; /* Ancho máximo para pantallas grandes */
+            height: 250px; /* Altura del contenedor para las tarjetas */
+            margin-bottom: 20px; /* Reducido para dejar espacio al contador */
+        }
+
+        /* Estilos para las tarjetas apiladas (detrás de la principal) */
+        .stacked-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 15px; /* Bordes redondeados */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Sombra suave */
+            top: 0;
+            left: 0;
+            transition: transform 0.3s ease; /* Transición suave para cualquier cambio */
+        }
+
+        .stacked-card-1 {
+            background-color: #a7d9f7; /* Azul ligeramente más claro */
+            transform: translate(10px, 10px) rotateZ(3deg); /* Desplazamiento y rotación */
+            z-index: 0; /* Detrás de la tarjeta principal */
+        }
+
+        .stacked-card-2 {
+            background-color: #8acfe8; /* Azul intermedio */
+            transform: translate(-10px, 10px) rotateZ(-3deg); /* Desplazamiento y rotación opuesta */
+            z-index: -1; /* Más atrás */
+        }
+
+        /* Estilos para la tarjeta flashcard principal */
+        .flashcard {
+            width: 100%;
+            height: 100%; /* Ocupa la altura del contenedor */
+            position: relative;
+            transform-style: preserve-3d; /* Mantiene los hijos en 3D */
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Transición elástica para el volteo */
+            cursor: pointer;
+            border-radius: 15px; /* Bordes redondeados */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25); /* Sombra más pronunciada para la tarjeta principal */
+            z-index: 1; /* Asegura que esté encima de las apiladas */
+        }
+
+        /* Clase para voltear la tarjeta */
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Estilos para el anverso y reverso de la tarjeta */
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden; /* Oculta la parte trasera de la cara */
+            display: flex;
+            flex-direction: column; /* Cambiado a columna para el título y contenido */
+            justify-content: center;
+            align-items: center;
+            padding: 30px; /* Más padding para un look minimalista */
+            text-align: center;
+            border-radius: 15px;
+            box-sizing: border-box;
+            color: #fff; /* Texto blanco */
+            font-weight: 600; /* Peso de fuente para el contenido */
+            line-height: 1.5; /* Espaciado de línea para mejor lectura */
+        }
+
+        .flashcard-title {
+            font-size: 1.2em; /* Tamaño de fuente más pequeño para el título */
+            font-weight: 400; /* Peso de fuente más ligero para el título */
+            opacity: 0.8; /* Ligeramente transparente */
+            margin-bottom: 10px; /* Espacio entre el título y el contenido */
+        }
+
+        .flashcard-content {
+            font-size: 1.3em; /* Tamaño de fuente ligeramente más grande para el contenido */
+        }
+
+        /* Estilos específicos para el anverso (pregunta) */
+        .flashcard-front {
+            background-color: #42a5f5; /* Azul primario más suave */
+            background-image: linear-gradient(135deg, #5788b1 0%, #246da8 100%); /* Degradado sutil */
+            border: none; /* Elimina el borde para un look más limpio */
+        }
+
+        /* Estilos específicos para el reverso (respuesta) */
+        .flashcard-back {
+            background-color: #1976d2; /* Azul más oscuro */
+            background-image: linear-gradient(135deg, #3e5872 0%, #193053 100%); /* Degradado sutil */
+            border: none; /* Elimina el borde */
+            transform: rotateY(180deg); /* Inicialmente volteado */
+        }
+
+        /* Estilos para el contador de tarjetas */
+        .card-counter {
+            margin: 20px 0; /* Espacio arriba y abajo del contador */
+            font-size: 1.1em;
+            color: #334e68; /* Color de texto oscuro para contraste */
+            font-weight: 600;
+        }
+
+        /* Contenedor de botones de navegación */
+        .navigation-buttons {
+            display: flex;
+            gap: 20px; /* Más espacio entre botones */
+            margin-top: 20px;
+        }
+
+        /* Estilos para los botones */
+        .nav-button {
+            background-color: #275fb3; /* Azul para botones */
+            color: white;
+            padding: 14px 30px; /* Más padding */
+            border: none;
+            border-radius: 10px; /* Bordes más redondeados */
+            cursor: pointer;
+            font-size: 1.1em; /* Tamaño de fuente ligeramente más grande */
+            font-weight: 700; /* Peso de fuente más fuerte */
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15); /* Sombra más definida */
+            letter-spacing: 0.5px; /* Espaciado de letras */
+        }
+
+        .nav-button:hover {
+            background-color: #1e88e5; /* Azul más oscuro al pasar el ratón */
+            transform: translateY(-3px); /* Efecto de elevación más pronunciado */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button:active {
+            background-color: #1565c0; /* Azul aún más oscuro al hacer clic */
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Media queries para responsividad */
+        @media (max-width: 600px) {
+            .flashcard-container {
+                height: 220px; /* Ajusta la altura para pantallas pequeñas */
+            }
+            .flashcard-face {
+                padding: 25px;
+            }
+            .flashcard-content {
+                font-size: 1.1em;
+            }
+            .nav-button {
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+            .flashcard-container {
+                width: 95%; /* Mayor ancho en móviles */
+            }
+            .card-counter {
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .flashcard-container {
+                height: 200px;
+            }
+            .flashcard-face {
+                padding: 20px;
+            }
+            .flashcard-content {
+                font-size: 1em;
+            }
+            .nav-button {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="text-4xl md:text-5xl font-bold text-blue-800 mb-10 text-center">Flash Cards</h1>
+
+    <div class="flashcard-container">
+        <div class="stacked-card stacked-card-2"></div>
+        <div class="stacked-card stacked-card-1"></div>
+        <div id="flashcard" class="flashcard">
+            <div id="flashcard-front" class="flashcard-face flashcard-front">
+                <span class="flashcard-title">Pregunta:</span>
+                <span id="front-content" class="flashcard-content"></span>
+            </div>
+            <div id="flashcard-back" class="flashcard-face flashcard-back">
+                <span class="flashcard-title">Respuesta:</span>
+                <span id="back-content" class="flashcard-content"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="card-counter" class="card-counter">
+        </div>
+
+    <div class="navigation-buttons">
+        <button id="prev-button" class="nav-button">Anterior</button>
+        <button id="next-button" class="nav-button">Siguiente</button>
+    </div>
+
+    <script>
+        // Array de objetos con las preguntas y respuestas
+        const flashcardsData = [
+            {
+                question: "La función que sirve para calcular el valor máximo de una serie de números",
+                answer: "MAX"
+            },
+            {
+                question: "La función que se utiliza para contar las celdas que contienen cualquier tipo de caracter en un rango",
+                answer: "CONTARA"
+            },
+            {
+                question: "Es una función que nos sirve para buscar información dentro de una tabla, específicamente en una columna vertical, y devolver un valor asociado de la misma fila.",
+                answer: "BUSCARV"
+            },
+            {
+                question: "La función que permite sumar celdas que cumplen con un solo criterio",
+                answer: "SUMAR.SI"
+            },
+            {
+                question: "La función que devuelve el valor mínimo dentro de un conjunto de números",
+                answer: "MIN"
+            },
+            {
+                question: "La función que se usa para realizar una suma simple de varios valores o rangos",
+                answer: "SUMAR"
+            },
+            {
+                question: "La función que devuelve el promedio de un rango de celdas",
+                answer: "PROMEDIO"
+            },
+            {
+                question: "La función que se utiliza para contar cuántas celdas cumplen con un criterio específico",
+                answer: "CONTAR.SI"
+            },
+            {
+                question: "La fórmula que permite sumar celdas que cumplen varios criterios",
+                answer: "SUMAR.SI.CONJUNTO"
+            },
+            {
+                question: "La función que nos devuelve el valor central en un conjunto de números ordenados, que separa la mitad superior de la mitad inferior",
+                answer: "MEDIANA"
+            },
+            {
+                question: "La función que devuelve el valor que más veces se repite en un rango de datos",
+                answer: "MODA"
+            },
+            {
+                question: "La función que permite contar la cantidad de celdas vacías en un rango",
+                answer: "CONTAR.BLANCO"
+            },
+            {
+                question: "La función lógica que se usa para evaluar una condición y devolver un valor si es verdadera y otro si es falsa",
+                answer: "SI"
+            },
+            {
+                question: "La función lógica que devuelve VERDADERO si todas las condiciones son verdaderas",
+                answer: "Y"
+            },
+            {
+                question: "La función lógica que devuelve VERDADERO si alguna de las condiciones es verdadera",
+                answer: "O"
+            },
+            {
+                question: "La función que permite realizar un promedio de los valores que cumplen una condición",
+                answer: "PROMEDIO.SI"
+            },
+            {
+                question: "La función que permite contar la cantidad de celdas que contienen números en un rango",
+                answer: "CONTAR"
+            },
+            {
+                question: "La función lógica que se combina con SI para que la condición se cumpla solo si dos o más condiciones son verdaderas",
+                answer: "SI + Y"
+            },
+            {
+                question: "La función lógica que se combina con SI para que la condición se cumpla si al menos una condición es verdadera",
+                answer: "SI + O"
+            },
+            {
+                question: "La función que se utiliza para contar cuántas celdas cumplen con dos o más criterios específicos",
+                answer: "CONTAR.SI.CONJUNTO"
+            }
+        ];
+
+        let currentCardIndex = 0; // Índice de la tarjeta actual
+        let shuffledFlashcards = []; // Array para almacenar las tarjetas barajadas
+
+        // Obtener referencias a los elementos del DOM
+        const flashcard = document.getElementById('flashcard');
+        const frontContent = document.getElementById('front-content'); // Nuevo ID para el contenido de la pregunta
+        const backContent = document.getElementById('back-content');   // Nuevo ID para el contenido de la respuesta
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const cardCounter = document.getElementById('card-counter'); // Referencia al nuevo contador
+
+        // Función para barajar el array de tarjetas (algoritmo de Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Intercambia elementos
+            }
+            return array;
+        }
+
+        // Función para mostrar la tarjeta actual y actualizar el contador
+        function displayCard() {
+            const card = shuffledFlashcards[currentCardIndex];
+            frontContent.textContent = card.question; // Muestra la pregunta en el nuevo span
+            backContent.textContent = card.answer;   // Muestra la respuesta en el nuevo span
+            flashcard.classList.remove('flipped'); // Asegura que la tarjeta no esté volteada al cambiar
+            cardCounter.textContent = `${currentCardIndex + 1}/${shuffledFlashcards.length}`; // Actualiza el contador
+        }
+
+        // Event listener para voltear la tarjeta al hacer clic
+        flashcard.addEventListener('click', () => {
+            flashcard.classList.toggle('flipped'); // Alterna la clase 'flipped'
+        });
+
+        // Event listener para el botón "Siguiente"
+        nextButton.addEventListener('click', () => {
+            currentCardIndex = (currentCardIndex + 1) % shuffledFlashcards.length; // Avanza al siguiente índice, volviendo al inicio si llega al final
+            displayCard(); // Muestra la nueva tarjeta
+        });
+
+        // Event listener para el botón "Anterior"
+        prevButton.addEventListener('click', () => {
+            currentCardIndex = (currentCardIndex - 1 + shuffledFlashcards.length) % shuffledFlashcards.length; // Retrocede al índice anterior, yendo al final si está en el inicio
+            displayCard(); // Muestra la nueva tarjeta
+        });
+
+        // Inicialización al cargar la página
+        window.onload = () => {
+            shuffledFlashcards = shuffleArray([...flashcardsData]); // Baraja las tarjetas y las almacena
+            displayCard(); // Muestra la primera tarjeta barajada
+        };
+    </script>
+</body>
+</html>
